@@ -18,7 +18,7 @@ Laravel 适配层，为 [req-res-crypto-core](https://github.com/wenber-yu/req-r
 ## 安装
 
 ```bash
-composer require wenbo/req-res-crypto-laravel
+composer require wenber-yu/req-res-crypto-laravel
 ```
 
 Laravel 自动发现机制会自动注册 `ReqResCryptoServiceProvider`。
