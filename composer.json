@@ -60,6 +60,5 @@
       "type": "path",
       "url": "../req-res-crypto-core"
     }
-  ],
-  "version": "0.1.0"
+  ]
 }
