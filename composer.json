@@ -1,5 +1,5 @@
 {
-  "name": "wenbo/req-res-crypto-laravel",
+  "name": "wenber-yu/req-res-crypto-laravel",
   "description": "Laravel adapter for req-res-crypto-core: middleware, facade, commands, and database key provider.",
   "type": "library",
   "license": "MIT",
@@ -11,7 +11,7 @@
   ],
   "require": {
     "php": ">=8.3",
-    "wenbo/req-res-crypto-core": "^0.1",
+    "wenber-yu/req-res-crypto-core": "^0.1",
     "illuminate/support": "^11.0|^12.0|^13.0",
     "illuminate/http": "^11.0|^12.0|^13.0",
     "illuminate/database": "^11.0|^12.0|^13.0",
