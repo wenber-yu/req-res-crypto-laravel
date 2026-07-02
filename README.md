@@ -11,7 +11,7 @@ AIGC:
 
 # req-res-crypto-laravel
 
-Laravel 适配层，为 [req-res-crypto-core](../req-res-crypto-core/README.md) 提供开箱即用的中间件、Facade、Artisan 命令和数据库密钥管理。
+Laravel 适配层，为 [req-res-crypto-core](https://github.com/wilbur-yu/req-res-crypto-core) 提供开箱即用的中间件、Facade、Artisan 命令和数据库密钥管理。
 
 依赖：PHP >= 8.3，Laravel 11 / 12。
 
@@ -53,6 +53,10 @@ php artisan vendor:publish --tag=req-res-crypto-migrations
 | `decrypt_routes` | — | `['api/*']` | 需要解密请求的路由模式 |
 | `database.connection` | `REQ_RES_CRYPTO_DB_CONNECTION` | `mysql` | 密钥表所在数据库连接 |
 | `database.table` | — | `req_res_crypto_public_keys` | 密钥数据表名 |
+| `skip_routes` | — | `[]` | 跳过加解密的路由模式（支持 `*` / `**` 通配符） |
+| `skip_header` | `REQ_RES_CRYPTO_SKIP_HEADER` | `X-Skip-Req-Res-Crypto` | 前端声明跳过加密的请求头名称 |
+| `crontab.enabled` | `REQ_RES_CRYPTO_CRONTAB_ENABLED` | `false` | 是否启用定时自动轮换 |
+| `crontab.rule` | — | `0 2 * * *` | Crontab 执行规则
 
 > **统一设计**：无论 `key_rotation.enabled` 是否开启，顶层 API（中间件、Facade）使用方式完全一致。
 > - 关闭时：全部从 bootstrap 配置密钥工作，无需数据库。
@@ -195,6 +199,66 @@ class OrderController extends Controller
 
 两种方式可以共存，注解中间件仅对标记了 `#[ReqResDecrypt]` / `#[ReqResEncrypt]` 的方法生效。
 
+## 跳过加解密
+
+三种方式可让特定路由跳过加解密处理，优先级从高到低：
+
+### 方式一：`#[SkipReqResCrypto]` 注解（推荐）
+
+在控制器类或方法上标注，该路由完全跳过加解密：
+
+```php
+use Wenbo\ReqResCrypto\Laravel\Attributes\SkipReqResCrypto;
+
+// 整个控制器跳过
+#[SkipReqResCrypto]
+class HealthController extends Controller
+{
+    public function check(): JsonResponse
+    {
+        return response()->json(['status' => 'ok']);
+    }
+}
+
+// 单个方法跳过
+class ApiController extends Controller
+{
+    #[SkipReqResCrypto]
+    public function publicEndpoint(): JsonResponse
+    {
+        return response()->json(['data' => 'public']);
+    }
+}
+```
+
+此注解仅在通过 `ReqResAnnotationMiddleware` 注解驱动模式时生效。
+
+### 方式二：`skip_routes` 路径模式
+
+在配置中按 URL 模式批量跳过（注解中间件模式下生效）：
+
+```php
+// config/req-res-crypto.php
+'skip_routes' => [
+    '/health',
+    '/api/public/**',   // /api/public 下所有路径
+    '/api/docs/*',      // /api/docs 下单层路径
+],
+```
+
+### 方式三：`skip_header` 请求头
+
+前端在请求中携带 `X-Skip-Req-Res-Crypto: 1` 头，**仅在路由命中 skip_routes 或 SkipReqResCrypto 注解时**才接受明文，否则返回 400。此机制仅在注解中间件模式下生效。
+
+```typescript
+// 前端：声明发送明文
+fetch('/api/health', {
+  headers: { 'X-Skip-Req-Res-Crypto': '1' },
+});
+```
+
+> **安全机制**：skip_header 是"白名单确认"机制，不是"无条件跳过"。前端声明跳过 + 后端路由不在白名单 = 直接拒绝。
+
 ## Facade
 
 `ReqResCrypto` Facade 提供便捷的密钥信息访问：
@@ -295,5 +359,11 @@ await fetch('/api/orders', {
 | 响应 body | `base64(wire_format)` |
 | 响应头 `X-Req-Res-Crypto-Key-Rotate`（可选） | JSON：`{"key_id":"...","sign_public_key":"...","exchange_public_key":"..."}` — 密钥轮换通知 |
 
-前端加密和解密的完整 TypeScript 实现参见 [核心包 README — 前端对接章节](../req-res-crypto-core/README.md#前端对接typescript--javascript)。
-*（内容由AI生成，仅供参考）*
+前端加密和解密的完整 TypeScript 实现参见 [核心包 README — 前端对接章节](https://github.com/wilbur-yu/req-res-crypto-core#%E5%89%8D%E7%AB%AF%E5%AF%B9%E6%8E%A5typescript--javascript)。
+
+## 相关包
+
+| 包 | 说明 |
+| --- | --- |
+| [req-res-crypto-core](https://github.com/wilbur-yu/req-res-crypto-core) | 核心加解密库（零框架依赖） |
+| [req-res-crypto-hyperf](https://github.com/wilbur-yu/req-res-crypto-hyperf) | Hyperf 适配包 |
