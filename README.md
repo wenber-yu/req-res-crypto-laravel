@@ -11,7 +11,7 @@ AIGC:
 
 # req-res-crypto-laravel
 
-Laravel 适配层，为 [req-res-crypto-core](https://github.com/wilbur-yu/req-res-crypto-core) 提供开箱即用的中间件、Facade、Artisan 命令和数据库密钥管理。
+Laravel 适配层，为 [req-res-crypto-core](https://github.com/wenber-yu/req-res-crypto-core) 提供开箱即用的中间件、Facade、Artisan 命令和数据库密钥管理。
 
 依赖：PHP >= 8.3，Laravel 11 / 12。
 
@@ -359,12 +359,12 @@ await fetch('/api/orders', {
 | 响应 body | `base64(wire_format)` |
 | 响应头 `X-Req-Res-Crypto-Key-Rotate`（可选） | JSON：`{"key_id":"...","sign_public_key":"...","exchange_public_key":"..."}` — 密钥轮换通知 |
 
-前端加密和解密的完整 TypeScript 实现参见 [req-res-crypto-js 客户端](https://github.com/wilbur-yu/req-res-crypto-js)。
+前端加密和解密的完整 TypeScript 实现参见 [req-res-crypto-js 客户端](https://github.com/wenber-yu/req-res-crypto-js)。
 
 ## 相关包
 
 | 包 | 说明 |
 | --- | --- |
-| [req-res-crypto-js](https://github.com/wilbur-yu/req-res-crypto-js) | 前端（浏览器）客户端 |
-| [req-res-crypto-core](https://github.com/wilbur-yu/req-res-crypto-core) | 核心加解密库（零框架依赖） |
-| [req-res-crypto-hyperf](https://github.com/wilbur-yu/req-res-crypto-hyperf) | Hyperf 适配包 |
+| [req-res-crypto-js](https://github.com/wenber-yu/req-res-crypto-js) | 前端（浏览器）客户端 |
+| [req-res-crypto-core](https://github.com/wenber-yu/req-res-crypto-core) | 核心加解密库（零框架依赖） |
+| [req-res-crypto-hyperf](https://github.com/wenber-yu/req-res-crypto-hyperf) | Hyperf 适配包 |
