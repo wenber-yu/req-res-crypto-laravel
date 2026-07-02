@@ -11,7 +11,7 @@
   ],
   "require": {
     "php": ">=8.3",
-    "wenbo/req-res-crypto-core": "*",
+    "wenbo/req-res-crypto-core": "^0.1",
     "illuminate/support": "^11.0|^12.0|^13.0",
     "illuminate/http": "^11.0|^12.0|^13.0",
     "illuminate/database": "^11.0|^12.0|^13.0",
@@ -53,12 +53,5 @@
     }
   },
   "minimum-stability": "dev",
-  "prefer-stable": true,
-  "repositories": [
-    {
-      "name": "core",
-      "type": "path",
-      "url": "../req-res-crypto-core"
-    }
-  ]
+  "prefer-stable": true
 }
