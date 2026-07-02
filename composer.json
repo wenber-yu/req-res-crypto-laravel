@@ -1,0 +1,65 @@
+{
+  "name": "wenbo/req-res-crypto-laravel",
+  "description": "Laravel adapter for req-res-crypto-core: middleware, facade, commands, and database key provider.",
+  "type": "library",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "wenbo",
+      "homepage": "https://wenber.club"
+    }
+  ],
+  "require": {
+    "php": ">=8.3",
+    "wenbo/req-res-crypto-core": "*",
+    "illuminate/support": "^11.0|^12.0|^13.0",
+    "illuminate/http": "^11.0|^12.0|^13.0",
+    "illuminate/database": "^11.0|^12.0|^13.0",
+    "illuminate/console": "^11.0|^12.0|^13.0",
+    "illuminate/cache": "^11.0|^12.0|^13.0",
+    "illuminate/contracts": "^11.0|^12.0|^13.0"
+  },
+  "require-dev": {
+    "pestphp/pest": "^3.0",
+    "orchestra/testbench": "^9.0|^10.0",
+    "phpstan/phpstan": "^1.12",
+    "mockery/mockery": "^1.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "Wenbo\\ReqResCrypto\\Laravel\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Wenbo\\ReqResCrypto\\Laravel\\Tests\\": "tests/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Wenbo\\ReqResCrypto\\Laravel\\ReqResCryptoServiceProvider"
+      ]
+    }
+  },
+  "scripts": {
+    "test": "pest",
+    "analyse": "phpstan analyse src --level=max",
+    "pint": "pint --parallel --repair"
+  },
+  "config": {
+    "allow-plugins": {
+      "pestphp/pest-plugin": true
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "repositories": [
+    {
+      "name": "core",
+      "type": "path",
+      "url": "../req-res-crypto-core"
+    }
+  ],
+  "version": "0.1.0"
+}
