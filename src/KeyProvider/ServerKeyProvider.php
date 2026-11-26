@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace Wenbo\ReqResCrypto\Laravel\KeyProvider;
 
 use Illuminate\Database\ConnectionInterface;
-use PDOException;
-use SensitiveParameter;
+use Illuminate\Support\Facades\Log;
 use Wenbo\ReqResCrypto\Core\ServerKey;
-use Wenbo\ReqResCrypto\Core\Exceptions\KeyException;
 use Wenbo\ReqResCrypto\Core\ServerKeyProviderInterface;
 
 /**
@@ -18,7 +16,8 @@ use Wenbo\ReqResCrypto\Core\ServerKeyProviderInterface;
  * - 关闭：使用配置文件中的 bootstrap 密钥，getPreIssuedKey() 永远返回 null
  * - 开启：优先查数据库，数据库无记录时降级使用配置文件密钥
  *
- * 由于该类绑定为 singleton，在单次请求内缓存 current 和 pre_issued 两行。
+ * 该类在容器中绑定为 scoped（每个请求一份，Octane 下同样按请求隔离），
+ * 因此可以在实例内缓存 current / pre_issued 查询结果，包括"无记录"的结果。
  */
 final class ServerKeyProvider implements ServerKeyProviderInterface
 {
@@ -34,8 +33,12 @@ final class ServerKeyProvider implements ServerKeyProviderInterface
     /** @var array<string, string>|null */
     private ?array $currentKeyRow = null;
 
+    private bool $currentLoaded = false;
+
     /** @var array<string, string>|null */
     private ?array $preIssuedKeyRow = null;
+
+    private bool $preIssuedLoaded = false;
 
     // ─────────────────────── 接口实现 ────────────────────────────
 
@@ -66,8 +69,9 @@ final class ServerKeyProvider implements ServerKeyProviderInterface
 
     private function loadCurrentKeyRow(): ?array
     {
-        if ($this->currentKeyRow === null && $this->rotationEnabled()) {
+        if (! $this->currentLoaded) {
             $this->currentKeyRow = $this->fetchRow('status', 'current');
+            $this->currentLoaded = true;
         }
 
         return $this->currentKeyRow;
@@ -75,8 +79,9 @@ final class ServerKeyProvider implements ServerKeyProviderInterface
 
     private function loadPreIssuedKeyRow(): ?array
     {
-        if ($this->preIssuedKeyRow === null && $this->rotationEnabled()) {
+        if (! $this->preIssuedLoaded) {
             $this->preIssuedKeyRow = $this->fetchRow('status', 'pre_issued');
+            $this->preIssuedLoaded = true;
         }
 
         return $this->preIssuedKeyRow;
@@ -104,7 +109,11 @@ final class ServerKeyProvider implements ServerKeyProviderInterface
                 ->first();
 
             return $row !== null ? (array) $row : null;
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            Log::warning('req-res-crypto: 读取数据库密钥失败，已降级到 bootstrap 密钥', [
+                'reason' => $e->getMessage(),
+            ]);
+
             return null;
         }
     }

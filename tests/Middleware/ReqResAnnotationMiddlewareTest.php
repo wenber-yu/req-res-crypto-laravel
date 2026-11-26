@@ -13,6 +13,7 @@ use Wenbo\ReqResCrypto\Core\SealerInterface;
 use Wenbo\ReqResCrypto\Core\SerializerInterface;
 use Wenbo\ReqResCrypto\Core\ServerKey;
 use Wenbo\ReqResCrypto\Core\ServerKeyProviderInterface;
+use Wenbo\ReqResCrypto\Core\Unsealed;
 use Wenbo\ReqResCrypto\Core\UnsealerInterface;
 use Wenbo\ReqResCrypto\Laravel\Attributes\ReqResDecrypt;
 use Wenbo\ReqResCrypto\Laravel\Attributes\ReqResEncrypt;
@@ -47,15 +48,10 @@ function createMocksForAnnotation(
 
         public function __construct(private ?string $return) {}
 
-        public function unseal(string $wire): mixed
+        public function unseal(string $wire): Unsealed
         {
             $this->callCount++;
-            return $this->return;
-        }
-
-        public function getClientExchangePubKey(): ?string
-        {
-            return random_bytes(32);
+            return new Unsealed($this->return, random_bytes(32));
         }
     };
 
@@ -118,7 +114,7 @@ test('decrypts and encrypts for method with both annotations on class', function
     $request->setRouteResolver(fn () => $route);
     $request->headers->set('Content-Type', 'application/octet-stream');
 
-    $response = new Response('{"result":"ok"}', 200);
+    $response = new Response('{"result":"ok"}', 200, ['Content-Type' => 'application/json']);
 
     $called = false;
     $result = $middleware->handle($request, function (Request $req) use ($plaintext, $response, &$called) {

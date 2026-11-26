@@ -67,7 +67,7 @@ test('generates key pairs and inserts with pre_issued status', function () {
 });
 
 // 验证 key_id 为 8 字符 hex
-test('inserted key_id is 24 hex characters', function () {
+test('inserted key_id is 8 hex characters', function () {
     $table = 'req_res_crypto_public_keys';
     $captured = null;
 

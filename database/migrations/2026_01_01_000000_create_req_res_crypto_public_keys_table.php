@@ -14,7 +14,8 @@ return new class extends Migration
 
         Schema::create($table, function (Blueprint $table) {
             $table->id();
-            $table->string('key_id', 32)->unique();
+            // keyId() 返回签名公钥前 4 字节 = 8 个 hex 字符
+            $table->string('key_id', 8)->unique();
             $table->text('sign_public_key');
             $table->text('sign_secret_key');
             $table->text('exchange_public_key');

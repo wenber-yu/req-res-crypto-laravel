@@ -139,7 +139,7 @@ test('propagates sealer exception without catching', function () {
     $request = Request::create('/api/data', 'GET');
     // 设置客户端公钥
     $request->attributes->set('req_res_crypto_client_pubkey', random_bytes(32));
-    $response = new Response('{"test":true}', 200);
+    $response = new Response('{"test":true}', 200, ['Content-Type' => 'application/json']);
 
     expect(fn () => $middleware->handle($request, fn () => $response))
         ->toThrow(\RuntimeException::class, 'Crypto failure');

@@ -152,16 +152,17 @@ final readonly class ReqResAnnotationMiddleware
             return $request;
         }
 
-        $plaintext = $this->unsealer->unseal($binary);
+        $unsealed = $this->unsealer->unseal($binary);
 
+        $plaintext = $unsealed->data;
         if (! is_string($plaintext)) {
             $plaintext = $this->serializer->serialize($plaintext);
         }
 
-        $clientPubkey = $this->unsealer->getClientExchangePubKey();
-        if ($clientPubkey !== null) {
-            $request->attributes->set('req_res_crypto_client_pubkey', $clientPubkey);
-        }
+        $request->attributes->set(
+            'req_res_crypto_client_pubkey',
+            $unsealed->clientExchangePublicKey,
+        );
 
         $contentProp = new \ReflectionProperty($request, 'content');
         $contentProp->setValue($request, $plaintext);
@@ -170,6 +171,8 @@ final readonly class ReqResAnnotationMiddleware
             $request->headers->set('Content-Type', 'application/json');
         }
 
+        $request->headers->set('Content-Length', (string) strlen($plaintext));
+
         return $request;
     }
 
@@ -177,6 +180,11 @@ final readonly class ReqResAnnotationMiddleware
     {
         $content = $response->getContent();
         if ($content === false || $content === '') {
+            return $response;
+        }
+
+        $contentType = strtolower((string) $response->headers->get('Content-Type'));
+        if (! str_contains($contentType, 'json')) {
             return $response;
         }
 

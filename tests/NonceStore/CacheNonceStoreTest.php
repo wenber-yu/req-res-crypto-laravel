@@ -14,7 +14,7 @@ test('exists returns true when cache has nonce', function () {
     $cache = $this->createMock(CacheRepository::class);
     $cache->expects($this->once())
         ->method('has')
-        ->with('req_res_nonce:' . $nonce)
+        ->with('req_res_nonce:' . bin2hex($nonce))
         ->willReturn(true);
 
     $store = new CacheNonceStore($cache);
@@ -42,7 +42,7 @@ test('store uses add for atomic write and returns true', function () {
     $cache = $this->createMock(CacheRepository::class);
     $cache->expects($this->once())
         ->method('add')
-        ->with('req_res_nonce:' . $nonce, 1, $ttl)
+        ->with('req_res_nonce:' . bin2hex($nonce), 1, $ttl)
         ->willReturn(true);
 
     $store = new CacheNonceStore($cache);
@@ -58,7 +58,7 @@ test('store returns false when nonce already exists', function () {
     $cache = $this->createMock(CacheRepository::class);
     $cache->expects($this->once())
         ->method('add')
-        ->with('req_res_nonce:' . $nonce, 1, 300)
+        ->with('req_res_nonce:' . bin2hex($nonce), 1, 300)
         ->willReturn(false);
 
     $store = new CacheNonceStore($cache);

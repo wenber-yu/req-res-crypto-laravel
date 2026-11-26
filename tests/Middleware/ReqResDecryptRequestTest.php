@@ -9,6 +9,7 @@ use Illuminate\Http\Response;
 use Wenbo\ReqResCrypto\Core\Exceptions\CryptoException;
 use Wenbo\ReqResCrypto\Core\JsonSerializer;
 use Wenbo\ReqResCrypto\Core\SerializerInterface;
+use Wenbo\ReqResCrypto\Core\Unsealed;
 use Wenbo\ReqResCrypto\Core\UnsealerInterface;
 use Wenbo\ReqResCrypto\Laravel\Middleware\ReqResDecryptRequest;
 
@@ -27,19 +28,14 @@ function mockUnsealer(?string $return = null, ?\Throwable $throw = null): Unseal
         ) {
         }
 
-        public function unseal(string $wire): mixed
+        public function unseal(string $wire): Unsealed
         {
             $this->callCount++;
             if ($this->throw !== null) {
                 throw $this->throw;
             }
 
-            return $this->return;
-        }
-
-        public function getClientExchangePubKey(): ?string
-        {
-            return null;
+            return new Unsealed($this->return, str_repeat('k', 32));
         }
     };
 }

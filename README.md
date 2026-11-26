@@ -73,7 +73,7 @@ php artisan migrate
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | `id` | bigint (PK) | 自增主键 |
-| `key_id` | varchar(32) UNIQUE | 72 位 hex，12 字节随机数 |
+| `key_id` | varchar(8) UNIQUE | 8 位 hex（签名公钥前 4 字节） |
 | `sign_public_key` | text | Ed25519 签名公钥（hex） |
 | `sign_secret_key` | text | Ed25519 签名私钥（hex） |
 | `exchange_public_key` | text | X25519 交换公钥（hex） |
@@ -299,46 +299,103 @@ php artisan req-res-crypto:keys:activate a1b2c3d4e5f6g7h8i9j0k1l2
 
 ### Laravel 路由配置
 
+### 公钥端点（开箱即用）
+
+安装后自动注册，无需编写控制器：
+
+```
+GET /req-res-crypto/public-key
+```
+
+响应已由服务端 Ed25519 私钥签名，前端验签通过后才会使用 `exchange_public_key`。
+
+```json
+{
+  "key_id": "a1b2c3d4",
+  "sign_public_key": "...",
+  "exchange_public_key": "...",
+  "pre_issued": null,
+  "issued_at": 1760000000,
+  "expires_at": 1760003600,
+  "sig_version": 1,
+  "signature": "..."
+}
+```
+
+配置（`config/req-res-crypto.php`）：
+
+```php
+'public_key' => [
+    'enabled' => env('REQ_RES_CRYPTO_PUBLIC_KEY_ENABLED', true),
+    'path' => '/req-res-crypto/public-key',
+    'ttl' => 3600,
+    'sign' => env('REQ_RES_CRYPTO_PUBLIC_KEY_SIGN', true),
+],
+```
+
+**边界与限制**
+- 首次信任：Ed25519 不能建立首次信任，依赖 HTTPS + TOFU 或前端内置 `rootSignPublicKey`。
+- 轮换窗口：客户端需此前拉取过旧 key 签名的 `pre_issued`；长期离线跨轮换且无 root 时失败关闭。
+- 无签名模式：`sign=false` 时退化为 TOFU，换 key 无签名会被客户端拒绝。
+- 私钥：接口只下发 `sign_public_key`，`sign_secret_key` 永不返回。
+- 不覆盖：服务端被攻破、客户端 XSS 篡改本地存储、无 root 时的首次投毒。
+- 过期：客户端拒绝 `expires_at` 已过期的响应，需保证机器时钟同步。
+
+### 会话握手端点（前向保密）
+
+安装后自动注册：
+
+```
+GET /req-res-crypto/handshake
+```
+
+每次握手生成一次性 X25519 临时密钥对，返回服务端临时公钥并用当前 Ed25519 私钥签名；
+临时私钥按 `session_id` 存入 Laravel Cache（TTL 到期删除），后续 v3 请求/响应都使用该临时密钥，
+长期静态私钥不参与会话加解密。
+
+```json
+{
+  "session_id": "<16B hex>",
+  "key_id": "a1b2c3d4",
+  "server_ephemeral_public_key": "<32B hex>",
+  "issued_at": 1760000000,
+  "expires_at": 1760000600,
+  "sig_version": 3,
+  "signature": "<64B hex>"
+}
+```
+
+配置（`config/req-res-crypto.php`）：
+
+```php
+'handshake' => [
+    'enabled' => env('REQ_RES_CRYPTO_HANDSHAKE_ENABLED', true),
+    'path' => '/req-res-crypto/handshake',
+    'session_ttl' => (int) env('REQ_RES_CRYPTO_SESSION_TTL', 600),
+],
+// 留空则复用 nonce_cache_store
+'session_cache_store' => env('REQ_RES_CRYPTO_SESSION_CACHE_STORE', ''),
+```
+
+- 该路径默认加入 `skip_routes`
+- 会话过期时中间件返回 `409` 和 `X-Req-Res-Crypto-Session-Expired: 1`，客户端会重新握手并重试一次
+- `handshake.enabled=false` 时关闭 v3，客户端自动回退 v2
+
+加密通信路由照常添加中间件：
+
 ```php
 // routes/api.php
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\CryptoController;
-
-// 公开端点：获取服务端公钥
-Route::get('/crypto/public-key', [CryptoController::class, 'publicKey']);
-
-// 加密通信路由
 Route::middleware(['req-res-decrypt', 'req-res-encrypt'])->group(function () {
     Route::post('/orders', [OrderController::class, 'store']);
     Route::get('/user', [UserController::class, 'show']);
 });
 ```
 
-### CryptoController 示例
-
-```php
-namespace App\Http\Controllers;
-
-use Wenbo\ReqResCrypto\Laravel\Facades\ReqResCrypto;
-
-class CryptoController extends Controller
-{
-    public function publicKey(): \Illuminate\Http\JsonResponse
-    {
-        return response()->json([
-            'key_id' => ReqResCrypto::keyId(),
-            'sign_public_key' => ReqResCrypto::signPublicKey(),
-            'exchange_public_key' => ReqResCrypto::exchangePublicKey(),
-        ]);
-    }
-}
-```
-
 ### 前端请求示例
 
 ```typescript
-// 1. 获取服务端公钥
-const pubKey = await fetch('/api/crypto/public-key').then(r => r.json());
+// 1. 获取服务端公钥（客户端自动验签 + pin）
+const pubKey = await fetch('/req-res-crypto/public-key').then(r => r.json());
 // => { key_id: "...", sign_public_key: "...", exchange_public_key: "..." }
 
 // 2. 发送加密请求（客户端公钥已嵌入 wire，无需额外请求头）
