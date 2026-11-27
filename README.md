@@ -85,7 +85,38 @@ php artisan migrate
 
 ## 中间件
 
-服务提供者自动注册两个中间件别名：`req-res-decrypt` 和 `req-res-encrypt`。
+服务提供者自动注册以下中间件别名：
+
+| 别名 | 类 | 作用 |
+| --- | --- | --- |
+| `req-res-decrypt` | `ReqResDecryptRequest` | 解密请求 |
+| `req-res-encrypt` | `ReqResEncryptResponse` | 加密响应 |
+| `req-res-enforce` | `ReqResEnforceEncrypted` | 拒绝明文请求 |
+| `req-res-exceptions` | `ReqResCryptoException` | 异常归一 |
+| `req-res-crypto` | `ReqResAnnotationMiddleware` | Attribute 驱动 |
+
+推荐顺序：`req-res-exceptions → req-res-enforce → req-res-decrypt → req-res-encrypt`。
+
+### 加密强制校验：`ReqResEnforceEncrypted`
+
+```php
+Route::middleware(['req-res-exceptions', 'req-res-enforce', 'req-res-decrypt', 'req-res-encrypt'])
+    ->group(function () {
+        Route::post('/api/orders', [OrderController::class, 'store']);
+    });
+```
+
+- 命中 `decrypt_routes` 的请求必须是合法 v2/v3 密文
+- 明文返回 `400`，错误码 `REQ_RES_CRYPTO_PLAINTEXT_FORBIDDEN`
+- 空 body 默认放行；`enforce.enabled=false` 可恢复旧的透明行为
+
+### 异常归一：`ReqResCryptoException`
+
+- `CryptoException` → `400 REQ_RES_CRYPTO_BAD_REQUEST`
+- `ReplayException` → `409 REQ_RES_CRYPTO_REPLAY`
+- `KeyException` → `503 REQ_RES_CRYPTO_KEY_UNAVAILABLE`
+- `SessionException` → `409 REQ_RES_CRYPTO_SESSION_EXPIRED` + `X-Req-Res-Crypto-Session-Expired: 1`
+- `SignatureException` → `500 REQ_RES_CRYPTO_SIGNATURE_INVALID`
 
 ### 解密请求：`ReqResDecryptRequest`
 
@@ -106,8 +137,8 @@ Route::middleware('req-res-decrypt')->group(function () {
 ```
 
 **行为**：
-- 若请求 body 不是有效的 base64 → 透传原始请求
-- 若 base64 解码成功但解密失败 → 透传原始请求（不抛异常）
+- 若请求 body 不是有效的 base64 → 透传原始请求（需要强制密文请加 `req-res-enforce`）
+- 若 base64 解码成功但解密失败 → 抛出 `CryptoException`，由 `req-res-exceptions` 归一为 JSON 错误
 - 解密成功后自动将 `Content-Type: application/octet-stream` 替换为 `application/json`
 - 仅对匹配 `decrypt_routes` 的路由生效
 

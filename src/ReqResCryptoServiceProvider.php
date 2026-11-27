@@ -12,6 +12,8 @@ use Wenbo\ReqResCrypto\Laravel\Commands\GenerateKeyCommand;
 use Wenbo\ReqResCrypto\Laravel\Middleware\ReqResEncryptResponse;
 use Wenbo\ReqResCrypto\Laravel\Middleware\ReqResDecryptRequest;
 use Wenbo\ReqResCrypto\Laravel\Middleware\ReqResAnnotationMiddleware;
+use Wenbo\ReqResCrypto\Laravel\Middleware\ReqResEnforceEncrypted;
+use Wenbo\ReqResCrypto\Laravel\Middleware\ReqResCryptoException;
 use Wenbo\ReqResCrypto\Laravel\KeyProvider\DatabaseKeyProvider;
 use Wenbo\ReqResCrypto\Laravel\KeyProvider\ServerKeyProvider;
 use Wenbo\ReqResCrypto\Laravel\NonceStore\CacheNonceStore;
@@ -147,6 +149,8 @@ final class ReqResCryptoServiceProvider extends ServiceProvider
         $router->aliasMiddleware('req-res-encrypt', ReqResEncryptResponse::class);
         $router->aliasMiddleware('req-res-decrypt', ReqResDecryptRequest::class);
         $router->aliasMiddleware('req-res-crypto', ReqResAnnotationMiddleware::class);
+        $router->aliasMiddleware('req-res-enforce', ReqResEnforceEncrypted::class);
+        $router->aliasMiddleware('req-res-exceptions', ReqResCryptoException::class);
 
         // 开箱即用的公钥下发接口（默认 GET /req-res-crypto/public-key）
         if (config('req-res-crypto.public_key.enabled', true)) {
